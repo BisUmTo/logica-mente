@@ -3,8 +3,27 @@ export function evaluate(node,values){if(node.op==='var'){if(node.key==='0'||nod
 export function steps(node,values){const out=[];function walk(n){if(n.op==='var'){const v=evaluate(n,values);return String(v);}if(n.op==='!'){const a=walk(n.arg),v=1-Number(a);out.push('!'+a+' = '+v);return String(v);}const a=walk(n.a),b=walk(n.b),v=n.op==='&'?Number(a)&Number(b):Number(a)|Number(b);out.push(a+' '+n.op+' '+b+' = '+v);return String(v);}walk(node);return out;}
 export function assignments(keys,valid=()=>true){return Array.from({length:2**keys.length},(_,mask)=>Object.fromEntries(keys.map((k,i)=>[k,(mask>>i)&1]))).filter(valid);}
 export const normalize=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
-export function matchSelection(level,phrase){const n=normalize(phrase);for(const [key,options]of Object.entries(level.props))for(const entry of options){const [txt,negative]=Array.isArray(entry)?entry:[entry,false];if(normalize(txt)===n)return{key,negative:!!negative};}return null;}
-export function check(level,groups,expression){const ast=parse(expression);for(const g of groups)if(!g.mapping)throw Error('Non posso assegnare vero o falso a «'+g.text+'». Seleziona una proposizione completa.');const expected=parse(level.rule),keys=Object.keys(level.props);const cases=assignments(keys,level.valid).map(input=>{const values=Object.fromEntries(groups.map(g=>[g.letter,g.mapping.negative?1-input[g.mapping.key]:input[g.mapping.key]]));const actual=evaluate(ast,values);return{input,values,actual,expected:evaluate(expected,input)};});return{ast,cases,wrong:cases.filter(c=>c.actual!==c.expected)};}
+// Result propositions name the output; they are never independent input variables.
+export const isResult=g=>g?.mapping?.role==='result';
+export const inputGroups=groups=>groups.filter(g=>!isResult(g));
+export const resultPrefix=groups=>{const g=groups.find(isResult);return g?g.letter+' = ':'';};
+const propositionText=s=>normalize(s).replace(/^(?:il|lo|la|i|gli|le|l) /,'');
+export function matchSelection(level,phrase){
+ const n=propositionText(phrase);
+ for(const [key,options] of Object.entries(level.props))for(const entry of options){const [txt,negative]=Array.isArray(entry)?entry:[entry,false];if(propositionText(txt)===n)return {key,negative:!!negative};}
+ const result=level.result||level.text?.split(' se ')[0];
+ if(result&&[result,...(level.resultAliases||[])].some(text=>propositionText(text)===n))return {role:'result'};
+ return null;
+}
+export function check(level,groups,expression){
+ const ast=parse(expression);
+ for(const g of groups)if(!g.mapping)throw Error('Non posso assegnare vero o falso a «'+g.text+'». Seleziona una proposizione completa.');
+ const output=groups.find(isResult);
+ if(output&&expression.toUpperCase().includes(output.letter))throw Error(output.letter+' è il risultato da calcolare: a destra di = usa le condizioni di partenza.');
+ const inputs=inputGroups(groups),expected=parse(level.rule),keys=Object.keys(level.props);
+ const cases=assignments(keys,level.valid).map(input=>{const values=Object.fromEntries(inputs.map(g=>[g.letter,g.mapping.negative?1-input[g.mapping.key]:input[g.mapping.key]]));const actual=evaluate(ast,values);return {input,values,actual,expected:evaluate(expected,input)};});
+ return {ast,cases,wrong:cases.filter(c=>c.actual!==c.expected)};
+}
 export const rename=(expression,from,to)=>expression.replace(/[A-Z]/g,c=>c===from?to:c);
 // Return exact source/result ranges, so identical subexpressions remain distinguishable.
 export function trace(ast, values) {

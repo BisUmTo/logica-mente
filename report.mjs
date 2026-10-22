@@ -1,5 +1,5 @@
-import {parse,check,evaluate,matchSelection} from './engine.mjs';
-import {getLevel} from './levels.mjs';
+import {parse,check,evaluate,matchSelection,isResult,resultPrefix} from './engine.mjs?v=result1';
+import {getLevel} from './levels.mjs?v=result1';
 const atom=key=>({op:'var',key});
 const key=n=>n.op==='var'?n.key:n.op==='!'?'!'+key(n.arg):n.op+'('+[key(n.a),key(n.b)].sort().join(',')+')';
 const same=(a,b)=>key(a)===key(b);
@@ -52,7 +52,7 @@ export function reviewSolution(level,groups,expression){
   return review;
  }catch(e){return {status:'unavailable',reason:e.message,simplification:null};}
 }
-export function completionEvidence(level,groups){return {levelSnapshot:{title:level.title,text:level.text,rule:level.rule,props:level.props},legend:groups.map(g=>({letter:g.letter,text:g.text,mapping:g.mapping}))};}
+export function completionEvidence(level,groups){return {levelSnapshot:{title:level.title,text:level.text,rule:level.rule,props:level.props,result:level.result,resultAliases:level.resultAliases},legend:groups.map(g=>({letter:g.letter,text:g.text,mapping:g.mapping}))};}
 export function buildReport(state,exportedAt=new Date().toISOString()){
  const starts=new Map(),solutions=[];
  for(const event of state.logs){
@@ -61,7 +61,9 @@ export function buildReport(state,exportedAt=new Date().toISOString()){
   const level=event.levelSnapshot||getLevel(event.level,state.seed),source=event.legend||starts.get(event.level)?.legend;
   const legend=source?.map(g=>({...g,mapping:g.mapping||matchSelection(level,g.text)}));
   const analysis=legend?reviewSolution(level,legend,event.expression):{status:'unavailable',reason:'Legenda non presente nello storico conservato.',simplification:null};
-  solutions.push({level:event.level,title:level.title,at:event.at,expression:event.expression,legend:legend||null,analysis});
+  const output=legend?.find(isResult),prefix=resultPrefix(legend||[]);
+  if(analysis.simplification)analysis.simplification.equation=prefix+analysis.simplification.expression;
+  solutions.push({level:event.level,title:level.title,at:event.at,expression:event.expression,equation:prefix+event.expression,resultProposition:output?{letter:output.letter,text:output.text}:null,legend:legend||null,analysis});
  }
  const flagged=solutions.filter(s=>s.analysis.simplification);
  return {app:'Logica Mente',version:2,notation:state.settings.notation||'symbols',expressionNotation:'Formule normalizzate con & | ! per il confronto docente.',exportedAt,student:state.name,className:state.className,seed:state.seed,summary:{completedLevels:state.completed,highestUnlocked:state.unlocked,errors:state.errors,restarts:state.restarts,activeSeconds:Math.round(state.activeMs/1000)},teacherReview:{criterion:'Confronto di correttezza e numero di operatori/occorrenze, con le lettere e la legenda dello studente. Non valuta la qualità della lettera scelta. Nessuna penalità e nessuna garanzia di minimo globale.',coverage:'Analizza le soluzioni concluse presenti nello storico locale (massimo 2000 eventi); eventuali attività precedenti potrebbero non essere più disponibili. Le righe sono tentativi conclusi, non voti o conteggi di competenze.',analysedSolutions:solutions.filter(s=>s.analysis.status==='analysed').length,unavailableSolutions:solutions.filter(s=>s.analysis.status==='unavailable').length,simplificationCount:flagged.length,levelsWithSimplifications:[...new Set(flagged.map(s=>s.level))],solutions},note:'Registro locale non autenticato. Tempo stimato con pagina visibile e interazioni negli ultimi 60 secondi; non misura il tempo esatto di studio.',events:state.logs};

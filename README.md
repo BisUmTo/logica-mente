@@ -4,6 +4,7 @@ Gioco didattico per tradurre frasi in espressioni booleane. Seleziona le proposi
 
 - 20 livelli guidati, poi incarichi procedurali.
 - AND, OR e NOT in quattro notazioni a scelta.
+- Proposizione risultato facoltativa: se selezionata, compare davanti alla formula (per esempio M = C & B).
 - Collaudo con albero ingrandibile, passaggi scritti o macchina.
 - Tre vite, indizi, suoni disattivabili e progressi locali.
 - Report JSON scaricabile con tentativi, tempo attivo stimato e confronto delle soluzioni per il docente.

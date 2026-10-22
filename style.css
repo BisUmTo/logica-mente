@@ -233,3 +233,9 @@ body[data-notation="words"] .machine-gates{font-size:21px}
  body[data-phase="build"] .legend-phrase{font-family:Arial,sans-serif;font-size:12px;line-height:1.3}
  body[data-phase="build"] .letter-tile{min-width:28px;height:30px;font-size:20px}
 }
+/* An optional result names the output, outside the editable right-hand side. */
+.expression-row{display:flex;align-items:center;gap:8px;width:100%;height:72px;min-height:0;flex-shrink:1}
+.console .expression-row textarea{flex:1;min-width:0;width:0;max-height:100%}
+.result-prefix{flex:none;font-family:Barlow,Georgia,serif;font-size:28px;font-weight:700;white-space:nowrap;color:#c3f3c2}
+.result-trace{padding:8px 10px;background:#d8e6cb;border:1px solid #91ab83;border-radius:5px;font-size:15px;line-height:1.4}
+@media(max-width:360px){.result-prefix{font-size:24px}.expression-row{gap:5px}}
